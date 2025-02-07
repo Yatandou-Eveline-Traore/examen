@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:examen/constants/constants.dart';
+import 'package:examen/pages/detail.page.dart';
 import 'package:examen/services/city.service.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -24,11 +25,12 @@ class _HomePageState extends State<HomePage> {
   var currentDate = 'Loading..';
   var last_updated = '${DateTime.now().hour}:00';
   String imageUrl = '';
+  String fallback = '';
   String city =
-      'Bamako'; //This is the Where on Earth Id for London which is our default city
-  String location = 'Bamako'; //Our default city
+      'Bamako'; //C’est l’identifiant Where on Earth pour Bamako qui est notre ville par défaut
+  String location = 'Bamako'; //Notre ville par défaut
 
-  //get the cities and selected cities data
+  //Obtenir les données sur les villes et les villes sélectionnées
   var selectedCities = City.selected;
   List<String> cities = [
     'Bamako',
@@ -50,9 +52,8 @@ class _HomePageState extends State<HomePage> {
     'San',
     'Douentza',
     'Bandiagara',
-  ]; //the list to hold our selected cities. Deafult is London
-
-  List consolidatedWeatherList = []; //To hold our weather data after api call
+  ]; //la liste des villes que nous avons sélectionnées. Deafult, c’est Bamako
+  List consolidatedWeatherList = []; //Pour conserver nos données météorologiques après l’appel d’API
 
   String baseUrl = 'https://api.weatherapi.com/v1/';
 
@@ -66,6 +67,7 @@ class _HomePageState extends State<HomePage> {
 
   void fetchWeatherData() async {
     try {
+      //envoie une requête HTTP à une API de prévisions météorologiques
       var weatherResult = await http.get(Uri.parse(baseUrl +
           'forecast.json?key=e74f44a130034b81840193148250502&days=7&q=' +
           city));
@@ -76,33 +78,29 @@ class _HomePageState extends State<HomePage> {
       print('result::::: $consolidatedWeather');
 
       setState(() {
+        //extrait des valeurs météorologiques spécifiques à partir d'un objet JSON, 
+        //les arrondit et les stocke dans des variables pour une utilisation ultérieure.
         count = consolidatedWeather.length;
-        // for (int i = 0; i < 7; i++) {
-        //   consolidatedWeather.add(consolidatedWeather[
-        //       i]); //this takes the consolidated weather for the next six days for the location searched
-        // }
-        //The index 0 referes to the first entry which is the current day. The next day will be index 1, second day index 2 etc...
         temperature = current['temp_c'].round();
         weatherStateName = current['condition']['text'];
         humidity = current['humidity'].round();
         windSpeed = current['wind_kph'].round();
         maxTemp = consolidatedWeather.first['day']['maxtemp_c'].round();
 
-        //date formatting
+        //Formatage de la date
         last_updated = current['last_updated'];
         var myDate = DateTime.parse(current['last_updated']);
         currentDate = DateFormat('EEEE, d MMMM').format(myDate);
 
-        //set the image url
-        imageUrl = weatherStateName
-            .replaceAll(' ', '')
-            .toLowerCase(); //remove any spaces in the weather state name
-        //and change to lowercase because that is how we have named our images.
+        //Définir l’URL de l’image
+        imageUrl = weatherStateName.replaceAll(' ', '').toLowerCase();
+        fallback = current['condition']['icon'];
+        
 
         consolidatedWeatherList = consolidatedWeather
             .toSet()
             .toList(); //Remove any instances of dublicates from our
-        //consolidated weather LIST
+        //Liste météorologique consolidée
       });
     } catch (e, tr) {
       print('error:::: $e -- $tr');
@@ -114,14 +112,15 @@ class _HomePageState extends State<HomePage> {
     fetchLocation(cities[0]);
     fetchWeatherData();
 
-    //For all the selected cities from our City model, extract the city and add it to our original cities list
+    //Pour toutes les villes sélectionnées dans notre modèle de ville,
+    // extrayez la ville et ajoutez-la à notre liste de villes d’origine
     for (int i = 0; i < selectedCities.length; i++) {
       cities.add(selectedCities[i].city);
     }
     super.initState();
   }
 
-  //Create a shader linear gradient
+  //Création d’un dégradé linéaire de shader
   final Shader linearGradient = const LinearGradient(
     colors: <Color>[Color(0xffABCFF2), Color(0xff9AC6F3)],
   ).createShader(const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0));
@@ -129,13 +128,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    //Create a size variable for the mdeia query
+    //Créer une variable de taille pour la requête de média
     Size size = MediaQuery.of(context).size;
     
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false,//Permet de dire à appBar de ne pas afficher le boutton automatique
         centerTitle: false,
         titleSpacing: 0,
         backgroundColor: Colors.white,
@@ -147,20 +146,15 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              //Our profile image
+              //Notre profile image
               ClipRRect(
                 borderRadius: const BorderRadius.all(Radius.circular(10)),
-                // child: Image.asset(
-                //   'assets/profile.png',
-                //   width: 40,
-                //   height: 40,
-                // ),
                 child: Icon(
                   Icons.person,
                   size: 40,
                 ),
               ),
-              //our location dropdown
+              //Notre liste déroulante de localisation
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -171,6 +165,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(
                     width: 4,
                   ),
+                  //Création du menu déroulante contenant les villes
                   DropdownButtonHideUnderline(
                     child: DropdownButton(
                         value: location,
@@ -237,10 +232,7 @@ class _HomePageState extends State<HomePage> {
                     left: 20,
                     child: imageUrl == ''
                         ? const Text('')
-                        : Image.asset(
-                            'assets/' + imageUrl + '.png',
-                            width: 150,
-                          ),
+                        : _asset,
                   ),
                   Positioned(
                     bottom: 30,
@@ -287,24 +279,25 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(
               height: 50,
             ),
+            //affichage des humidité et vent
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   weatherItem(
-                    text: 'Wind Speed',
+                    text: 'Vitesse du vent',
                     value: windSpeed,
                     unit: 'km/h',
                     imageUrl: 'assets/windspeed.png',
                   ),
                   weatherItem(
-                      text: 'Humidity',
+                      text: 'Humidité',
                       value: humidity,
                       unit: '',
                       imageUrl: 'assets/humidity.png'),
                   weatherItem(
-                    text: 'Wind Speed',
+                    text: 'Vitesse du vent',
                     value: maxTemp,
                     unit: 'C',
                     imageUrl: 'assets/max-temp.png',
@@ -315,6 +308,8 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(
               height: 20,
             ),
+            
+            //affichage de la partie today
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -357,19 +352,19 @@ class _HomePageState extends State<HomePage> {
                           .format(parsedDate)
                           .substring(0, 3); //formateed date
 
+                      // Extrait l'heure actuelle à partir d'une chaine de caractère
                       var currentHour =
-                          last_updated.split(' ').last.split(':').first;
-                      print('currentHour::: $currentHour');
+                          last_updated.split(' ').last.split(':').first;//etrait l'heure actuelle
+                      print('currentHour::: $currentHour');//debogue a console
                       var hour =
                           (consolidatedWeatherList[index]['hour'] as List)
-                              .firstWhere(
+                              .firstWhere(//rechercher l'heure correspondant
                         (element) {
                           var t = '${element['time']}'
                               .split(' ')
                               .last
                               .split(':')
                               .first;
-                          print('hour:::: $t');
                           return t == currentHour;
                         },
                         orElse: () => null,
@@ -377,15 +372,14 @@ class _HomePageState extends State<HomePage> {
 
                       return GestureDetector(
                         onTap: () {
-                          // Navigator.push(
-                          //     context,
-                          //     MaterialPageRoute(
-                          //         builder: (context) => DetailPage(
-                          //               consolidatedWeatherList:
-                          //                   consolidatedWeatherList,
-                          //               selectedId: index,
-                          //               location: location,
-                          //             )));
+                          Navigator.push(context,
+                              MaterialPageRoute(
+                                builder: (context) => DetailPage(
+                                         consolidatedWeatherList:
+                                             consolidatedWeatherList,
+                                         selectedId: index,
+                                         location: location,
+                                       )));
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -420,10 +414,6 @@ class _HomePageState extends State<HomePage> {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              // Image.asset(
-                              //   'assets/' + weatherUrl + '.png',
-                              //   width: 30,
-                              // ),
                               Image.network(
                                 'https:' + hour['condition']['icon'],
                                 width: 30,
@@ -438,7 +428,7 @@ class _HomePageState extends State<HomePage> {
                                       : Constants.primary,
                                   fontWeight: FontWeight.w500,
                                 ),
-                              )
+                              ),  
                             ],
                           ),
                         ),
@@ -449,6 +439,31 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  //renvoie une image différente selon la valeur de imageUrl
+  Widget get _asset {
+    try {
+      print('_asset====== $imageUrl -- $fallback');
+      if (imageUrl == 'partlycloudy') {
+        return Image.network(
+          'https:' + fallback,
+          width: 150,
+        );
+      }
+      return Image.asset(
+        'assets/' + imageUrl + '.png',
+        width: 150,
+      );
+    } catch (e) {
+      print('_asset======error $e');
+      return Image.network(
+        'https:' + fallback,
+        width: 150,
+      );
+    }
+  }
+}
+
 
   Widget weatherItem({
     required String text,
@@ -465,7 +480,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         const SizedBox(
-          height: 8,
+          height: 8,//Ajoute un autre espacement vertical de 8 pixels
         ),
         Container(
           padding: const EdgeInsets.all(10.0),
@@ -478,8 +493,9 @@ class _HomePageState extends State<HomePage> {
           child: Image.asset(imageUrl),
         ),
         const SizedBox(
-          height: 8,
+          height: 8,//Ajoute un autre espacement vertical de 8 pixels
         ),
+        //affiche par exemple 25°C
         Text(
           value.toString() + unit,
           style: const TextStyle(
@@ -489,6 +505,20 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+
+Widget asset(String img, String fallback) {
+  try {
+    return Image.asset(
+      'assets/' + img + '.png',
+      width: 150,
+    );
+  } catch (e) {
+    return Image.network(
+      'https:' + fallback,
+      width: 150,//permet de charger une image sur URL
+    );
+  }
 }
+
 
 
